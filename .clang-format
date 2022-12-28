@@ -1,0 +1,18 @@
+---
+BasedOnStyle: Mozilla
+AlwaysBreakAfterDefinitionReturnType: None
+AlwaysBreakAfterReturnType: None
+BraceWrapping:
+  AfterEnum: true
+  AfterFunction: true
+  AfterStruct: true
+  AfterExternBlock: true
+BreakBeforeBraces: Attach
+BreakConstructorInitializers: BeforeComma
+ColumnLimit: 120
+CommentPragmas: '^[^ ]'
+UseTab: Always
+IndentWidth: 2
+TabWidth: 2
+...
+
