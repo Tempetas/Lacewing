@@ -127,7 +127,7 @@ int main(int argc, char** argv) {
 	}
 
 	puts(PREFIX "~<Connected>~\e[0m");
-	puts(PREFIX "~<Attempting to log in>~\e[0m");
+	puts(PREFIX "~<Attempting to log in>~\e[0m\n");
 
 	//Ctrl+C handler
 	signal(SIGINT, disconnectSignal);
