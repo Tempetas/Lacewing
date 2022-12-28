@@ -27,7 +27,7 @@ char sendBuffer[MAX_MESSAGE_LENGTH] = { 0 };
 pthread_t recThread;
 
 //Handle incoming packets
-void* recieveThread(void*) {
+void* recieveThread(void* ptr) {
 	while (1) {
 		memset(recieveBuffer, 0, sizeof(recieveBuffer));
 
@@ -41,7 +41,7 @@ void* recieveThread(void*) {
 			case PACKET_LOG:
 				printf("\e[3m\e[37m<Log> %s\e[0m\n", recieveBuffer + 2);
 				break;
-			case PACKET_MESSAGE:
+			case PACKET_MESSAGE:;
 				char* str = strtok(recieveBuffer + 2, "~");
 				printf("\e[32m<Message> %s", str);
 
