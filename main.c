@@ -116,6 +116,8 @@ int main(int argc, char** argv) {
 	server.sin_addr.s_addr = inet_addr(argv[1]);
 	server.sin_port = htons(atoi(argv[2]));
 
+	printf("\033]0;Lacewing\007");
+
 	puts(PREFIX "~<Connecting>~\e[0m");
 
 	//Attempt to establish a connection
