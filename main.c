@@ -6,7 +6,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#define MAX_MESSAGE_LENGTH 256
+#define MAX_MESSAGE_LENGTH 4096
 #define PREFIX "\e[36m[Lacewing] "
 #define SEPARATOR "~"
 
