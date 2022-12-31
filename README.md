@@ -1,6 +1,6 @@
 # Lacewing
 
-A barebones terminal client for ScriptChat, [Adivius](https://www.github.com/Adivius)'s
+A barebones terminal client for Spark, [Adivius](https://www.github.com/Adivius)'s
 chatting application.
 
 ## Usage
