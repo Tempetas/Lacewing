@@ -6,10 +6,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#define MAX_MESSAGE_LENGTH 4096
-#define PREFIX "\e[36m[Lacewing] "
-#define SEPARATOR "~"
-
 #define TYPE_PACKET 0
 #define TYPE_LOGIN 1
 #define TYPE_LOG 3
@@ -19,6 +15,18 @@
 #define PACKET_LOG '3'
 #define PACKET_MESSAGE '4'
 #define PACKET_NAME '5'
+
+#define COLOR_RESET "\e[0m"
+#define COLOR_RED "\e[91m"
+#define COLOR_CYAN "\e[36m"
+#define COLOR_ITALIC "\e[3m"
+#define COLOR_GREY "\e[37m"
+#define COLOR_GREEN "\e[32m"
+#define COLOR_DARK_GREY "\e[90m"
+
+#define MAX_MESSAGE_LENGTH 4096
+#define PREFIX COLOR_CYAN "[Lacewing] "
+#define SEPARATOR "~"
 
 int socketHandle;
 char recieveBuffer[MAX_MESSAGE_LENGTH] = { 0 };
@@ -35,27 +43,28 @@ void* recieveThread(void* ptr) {
 
 		switch (recieveBuffer[0]) {
 			case PACKET_DISCONNECT:
-				printf(PREFIX "\e[91mYou have been disconnected. Reason: %s\e[0m", recieveBuffer + 2);
+				printf(PREFIX COLOR_RED "You have been disconnected. Reason: %s" COLOR_RESET, recieveBuffer + 2);
 				exit(0);
 				break;
 			case PACKET_LOG:
-				printf("\e[3m\e[37m<Log> %s\e[0m\n", recieveBuffer + 2);
+				printf(COLOR_ITALIC COLOR_GREY "<Log> %s\n" COLOR_RESET, recieveBuffer + 2);
 				break;
 			case PACKET_MESSAGE:;
 				char* str = strtok(recieveBuffer + 2, "~");
-				printf("\e[32m<Message> %s", str);
+				printf("<Message> %s", str);
 
 				str = strtok(NULL, SEPARATOR);
-				printf(" - %s\e[0m\n", str);
+				printf(" - %s\n" COLOR_RESET, str);
 				break;
 			case '\0':
-				puts(PREFIX "\e[91mConnection lost\e[0m");
+				puts(PREFIX COLOR_RED "Connection lost" COLOR_RESET);
 				exit(0);
 				break;
 			case PACKET_NAME:
 				break;
 			default:
-				printf("\e[90m<Unknown packet> ID: %i | Data: %s\e[0m\n", recieveBuffer[0] - '0', recieveBuffer);
+				printf(
+					COLOR_DARK_GREY "<Unknown packet> ID: %i | Data: %s\n" COLOR_RESET, recieveBuffer[0] - '0', recieveBuffer);
 				break;
 		}
 	}
@@ -87,7 +96,7 @@ void sendMessage(char* msg, int type) {
 
 //Ctrl+C handler
 void disconnectSignal() {
-	puts(PREFIX "~<Quitting>~\e[0m");
+	puts(PREFIX "~<Quitting>~" COLOR_RESET);
 
 	sendMessage("2" SEPARATOR "Client closed", TYPE_PACKET);
 
@@ -98,7 +107,7 @@ void disconnectSignal() {
 
 int main(int argc, char** argv) {
 	if (argc < 4 || argc > 5) {
-		puts(PREFIX "\e[91mCommand usage: ./lacewing <ip> <port> <username> <security code (default: 0)>\e[0m");
+		puts(PREFIX COLOR_RED "Command usage: ./lacewing <ip> <port> <username> <security code (default: 0)>" COLOR_RESET);
 		return 0;
 	}
 
@@ -106,7 +115,7 @@ int main(int argc, char** argv) {
 	socketHandle = socket(AF_INET, SOCK_STREAM, 0);
 
 	if (socketHandle == -1) {
-		puts(PREFIX "\e[91mCouldn't create a socket\e[0m");
+		puts(PREFIX COLOR_RED "Couldn't create a socket" COLOR_RESET);
 		return 0;
 	}
 
@@ -116,18 +125,19 @@ int main(int argc, char** argv) {
 	server.sin_addr.s_addr = inet_addr(argv[1]);
 	server.sin_port = htons(atoi(argv[2]));
 
+	//Set terminal title
 	printf("\033]0;Lacewing\007");
 
-	puts(PREFIX "~<Connecting>~\e[0m");
+	puts(PREFIX "~<Connecting>~" COLOR_RESET);
 
 	//Attempt to establish a connection
 	if (connect(socketHandle, (struct sockaddr*)&server, sizeof(server)) != 0) {
-		puts(PREFIX "Couldn't connect to the server\e[0m");
+		puts(PREFIX COLOR_RED "Couldn't connect to the server" COLOR_RESET);
 		return 0;
 	}
 
-	puts(PREFIX "~<Connected>~\e[0m");
-	puts(PREFIX "~<Attempting to log in>~\e[0m\n");
+	puts(PREFIX "~<Connected>~" COLOR_RESET);
+	puts(PREFIX "~<Attempting to log in>~\n" COLOR_RESET);
 
 	//Ctrl+C handler
 	signal(SIGINT, disconnectSignal);
