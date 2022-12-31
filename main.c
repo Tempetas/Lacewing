@@ -29,13 +29,12 @@
 #define SEPARATOR "~"
 
 int socketHandle;
-char recieveBuffer[MAX_MESSAGE_LENGTH] = { 0 };
-char sendBuffer[MAX_MESSAGE_LENGTH] = { 0 };
-
 pthread_t recThread;
 
 //Handle incoming packets
 void* recieveThread(void* ptr) {
+	char recieveBuffer[MAX_MESSAGE_LENGTH] = { 0 };
+
 	while (1) {
 		memset(recieveBuffer, 0, sizeof(recieveBuffer));
 
@@ -74,7 +73,7 @@ void* recieveThread(void* ptr) {
 
 //Send packets
 void sendMessage(char* msg, int type) {
-	memset(sendBuffer, 0, sizeof(sendBuffer));
+	char sendBuffer[MAX_MESSAGE_LENGTH] = { 0 };
 
 	switch (type) {
 		case TYPE_MESSAGE:
