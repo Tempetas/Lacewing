@@ -36,8 +36,8 @@ struct termios originalTermAttributes;
 //Global for it to be able to be drawn in the recieve thread
 char inputBuffer[MAX_MESSAGE_LENGTH] = { '\0' };
 
+//Restore original terminal attributes
 void resetTerminal() {
-	//Restore original terminal attributes
 	tcsetattr(fileno(stdin), TCSANOW, &originalTermAttributes);
 }
 
@@ -236,7 +236,7 @@ int main(int argc, char** argv) {
 					inputBuffer[--charactersInBuff] = '\0';
 
 					printf("\b \b");
-				} else {
+				} else if (character != '\e') {
 					fputc(character, stdout);
 
 					inputBuffer[charactersInBuff++] = character;
