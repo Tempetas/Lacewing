@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #define PACKET_UNKNOWN '0'
@@ -30,10 +31,10 @@ pthread_t recThread;
 
 //Handle incoming packets
 void* recieveThread(void* ptr) {
-	char recieveBuffer[MAX_MESSAGE_LENGTH] = { 0 };
+	char recieveBuffer[MAX_MESSAGE_LENGTH] = { '\0' };
 
 	while (1) {
-		memset(recieveBuffer, 0, sizeof(recieveBuffer));
+		memset(recieveBuffer, '\0', sizeof(recieveBuffer));
 
 		read(socketHandle, recieveBuffer, sizeof(recieveBuffer));
 
@@ -51,10 +52,27 @@ void* recieveThread(void* ptr) {
 				//Print the message
 				printf(COLOR_GREEN "<Message> %s", str);
 
-				//And the author + timestamp
+				//The author
 				str = strtok(NULL, SEPARATOR);
-				printf(" - %s" COLOR_RESET "\n", str);
+				printf(" - %s", str);
 
+				//And the timestamp
+				str = strtok(NULL, SEPARATOR);
+
+				//Workaround for the weird way timestamps are formatted by the server
+				str[strlen(str) - 4] = '\0';
+
+				time_t time = atol(str);
+
+				//Convert to local time
+				struct tm localTime;
+				localtime_r(&time, &localTime);
+
+				//Format
+				char formattedTime[64];
+				strftime(formattedTime, sizeof(formattedTime), "%H:%M %d/%m/%y", &localTime);
+
+				printf(" (%s)" COLOR_RESET "\n", formattedTime);
 				break;
 			case '\0':
 				puts(PREFIX COLOR_RED "Connection lost" COLOR_RESET);
@@ -74,22 +92,15 @@ void* recieveThread(void* ptr) {
 
 //Send packets
 void sendMessage(char* msg, int type) {
-	char sendBuffer[MAX_MESSAGE_LENGTH] = { 0 };
+	char sendBuffer[MAX_MESSAGE_LENGTH] = { '\0' };
 
-	switch (type) {
-		case PACKET_MESSAGE:
-			strcat(sendBuffer, "4" SEPARATOR);
-			break;
-		case PACKET_LOG:
-			strcat(sendBuffer, "3" SEPARATOR);
-			break;
+	//Prefix the data with the packet id
+	if (type != PACKET_UNKNOWN) {
+		sendBuffer[0] = type;
+		sendBuffer[1] = '~';
 	}
 
 	strcat(sendBuffer, msg);
-
-	if (type == PACKET_CONNECT) {
-		strcat(sendBuffer, "\n");
-	}
 
 	write(socketHandle, sendBuffer, strlen(sendBuffer));
 }
@@ -111,7 +122,7 @@ int main(int argc, char** argv) {
 		return 0;
 	}
 
-	//Creatinga a socket
+	//Creating a socket
 	socketHandle = socket(AF_INET, SOCK_STREAM, 0);
 
 	if (socketHandle == -1) {
@@ -119,6 +130,7 @@ int main(int argc, char** argv) {
 		return 0;
 	}
 
+	//Server parameters
 	struct sockaddr_in server;
 
 	server.sin_family = AF_INET;
@@ -146,20 +158,21 @@ int main(int argc, char** argv) {
 	pthread_create(&recThread, NULL, recieveThread, NULL);
 	pthread_detach(recThread);
 
-	char inputBuffer[MAX_MESSAGE_LENGTH] = { 0 };
+	char inputBuffer[MAX_MESSAGE_LENGTH] = { '\0' };
 
 	//Craft the login packet
-	inputBuffer[0] = PACKET_CONNECT;
-	strcpy(inputBuffer + 1, SEPARATOR);
 	strcat(inputBuffer, argv[3]);
 	strcat(inputBuffer, SEPARATOR);
 	strcat(inputBuffer, ((argc == 4) ? "0" : argv[4]));
+
+	//Workaround for the server's current implementation
+	strcat(inputBuffer, "\n");
 
 	sendMessage(inputBuffer, PACKET_CONNECT);
 
 	while (1) {
 		//Recieve user input
-		memset(inputBuffer, 0, sizeof(inputBuffer));
+		memset(inputBuffer, '\0', sizeof(inputBuffer));
 
 		for (int i = 0; (inputBuffer[i] = getchar()) != '\n'; i++)
 			;
