@@ -6,11 +6,8 @@
 #include <string.h>
 #include <unistd.h>
 
-#define TYPE_PACKET 0
-#define TYPE_LOGIN 1
-#define TYPE_LOG 3
-#define TYPE_MESSAGE 4
-
+#define PACKET_UNKNOWN '0'
+#define PACKET_CONNECT '1'
 #define PACKET_DISCONNECT '2'
 #define PACKET_LOG '3'
 #define PACKET_MESSAGE '4'
@@ -46,14 +43,18 @@ void* recieveThread(void* ptr) {
 				exit(0);
 				break;
 			case PACKET_LOG:
-				printf(COLOR_ITALIC COLOR_GREY "<Log> %s\n" COLOR_RESET, recieveBuffer + 2);
+				printf(COLOR_ITALIC COLOR_GREY "<Log> %s" COLOR_RESET "\n", recieveBuffer + 2);
 				break;
 			case PACKET_MESSAGE:;
 				char* str = strtok(recieveBuffer + 2, "~");
-				printf("<Message> %s", str);
 
+				//Print the message
+				printf(COLOR_GREEN "<Message> %s", str);
+
+				//And the author + timestamp
 				str = strtok(NULL, SEPARATOR);
-				printf(" - %s\n" COLOR_RESET, str);
+				printf(" - %s" COLOR_RESET "\n", str);
+
 				break;
 			case '\0':
 				puts(PREFIX COLOR_RED "Connection lost" COLOR_RESET);
@@ -63,7 +64,7 @@ void* recieveThread(void* ptr) {
 				break;
 			default:
 				printf(
-					COLOR_DARK_GREY "<Unknown packet> ID: %i | Data: %s\n" COLOR_RESET, recieveBuffer[0] - '0', recieveBuffer);
+					COLOR_DARK_GREY "<Unknown packet> ID: %i | Data: %s" COLOR_RESET "\n", recieveBuffer[0] - '0', recieveBuffer);
 				break;
 		}
 	}
@@ -76,17 +77,17 @@ void sendMessage(char* msg, int type) {
 	char sendBuffer[MAX_MESSAGE_LENGTH] = { 0 };
 
 	switch (type) {
-		case TYPE_MESSAGE:
+		case PACKET_MESSAGE:
 			strcat(sendBuffer, "4" SEPARATOR);
 			break;
-		case TYPE_LOG:
+		case PACKET_LOG:
 			strcat(sendBuffer, "3" SEPARATOR);
 			break;
 	}
 
 	strcat(sendBuffer, msg);
 
-	if (type == TYPE_LOGIN) {
+	if (type == PACKET_CONNECT) {
 		strcat(sendBuffer, "\n");
 	}
 
@@ -97,7 +98,7 @@ void sendMessage(char* msg, int type) {
 void disconnectSignal() {
 	puts(PREFIX "~<Quitting>~" COLOR_RESET);
 
-	sendMessage("2" SEPARATOR "Client closed", TYPE_PACKET);
+	sendMessage("2" SEPARATOR "Client closed", PACKET_UNKNOWN);
 
 	close(socketHandle);
 
@@ -136,7 +137,7 @@ int main(int argc, char** argv) {
 	}
 
 	puts(PREFIX "~<Connected>~" COLOR_RESET);
-	puts(PREFIX "~<Attempting to log in>~\n" COLOR_RESET);
+	puts(PREFIX "~<Attempting to log in>~" COLOR_RESET "\n");
 
 	//Ctrl+C handler
 	signal(SIGINT, disconnectSignal);
@@ -148,12 +149,13 @@ int main(int argc, char** argv) {
 	char inputBuffer[MAX_MESSAGE_LENGTH] = { 0 };
 
 	//Craft the login packet
-	strcpy(inputBuffer, "1" SEPARATOR);
+	inputBuffer[0] = PACKET_CONNECT;
+	strcpy(inputBuffer + 1, SEPARATOR);
 	strcat(inputBuffer, argv[3]);
 	strcat(inputBuffer, SEPARATOR);
 	strcat(inputBuffer, ((argc == 4) ? "0" : argv[4]));
 
-	sendMessage(inputBuffer, TYPE_LOGIN);
+	sendMessage(inputBuffer, PACKET_CONNECT);
 
 	while (1) {
 		//Recieve user input
@@ -163,7 +165,7 @@ int main(int argc, char** argv) {
 			;
 
 		//Send it off
-		sendMessage(inputBuffer, TYPE_MESSAGE);
+		sendMessage(inputBuffer, PACKET_MESSAGE);
 
 		//Move the terminal caret back a line
 		printf("\r\033[A\033[K");
