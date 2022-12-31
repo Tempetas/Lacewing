@@ -97,7 +97,7 @@ void sendMessage(char* msg, int type) {
 	//Prefix the data with the packet id
 	if (type != PACKET_UNKNOWN) {
 		sendBuffer[0] = type;
-		sendBuffer[1] = '~';
+		strcat(sendBuffer, SEPARATOR);
 	}
 
 	strcat(sendBuffer, msg);
@@ -109,7 +109,7 @@ void sendMessage(char* msg, int type) {
 void disconnectSignal() {
 	puts(PREFIX "~<Quitting>~" COLOR_RESET);
 
-	sendMessage("2" SEPARATOR "Client closed", PACKET_UNKNOWN);
+	sendMessage("Client closed", PACKET_DISCONNECT);
 
 	close(socketHandle);
 
