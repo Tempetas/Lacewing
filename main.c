@@ -228,10 +228,11 @@ int main(int argc, char** argv) {
 				}
 			} else {
 				//The "delete" character
-				if (character == 127 && charactersInBuff > 0) {
-					inputBuffer[--charactersInBuff] = '\0';
-
-					printf("\b \b");
+				if (character == 127) {
+					if (charactersInBuff > 0) {
+						inputBuffer[--charactersInBuff] = '\0';
+						printf("\b \b");
+					}
 				} else if (character != '\e') {
 					fputc(character, stdout);
 
