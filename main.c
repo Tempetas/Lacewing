@@ -22,7 +22,7 @@
 #define COLOR_GREY "\e[37m"
 #define COLOR_GREEN "\e[32m"
 #define COLOR_DARK_GREY "\e[90m"
-#define COLOR_CLEARLINE "\e\r[K"
+#define TERM_CLEARLINE "\e\r[K"
 
 #define MAX_MESSAGE_LENGTH 4096
 #define PREFIX COLOR_CYAN "[Lacewing] "
@@ -61,7 +61,7 @@ void sendMessage(char* msg, int type) {
 void disconnectSignal() {
 	resetTerminal();
 
-	puts(COLOR_CLEARLINE PREFIX "~<Quitting>~" COLOR_RESET);
+	puts(TERM_CLEARLINE PREFIX "~<Quitting>~" COLOR_RESET);
 
 	sendMessage("Client closed", PACKET_DISCONNECT);
 
@@ -86,24 +86,19 @@ void* recieveThread(void* ptr) {
 
 		switch (recieveBuffer[0]) {
 			case PACKET_DISCONNECT:
-				printf(PREFIX COLOR_RED "You have been disconnected. Reason: %s" COLOR_RESET, recieveBuffer + 2);
+				printf(TERM_CLEARLINE PREFIX COLOR_RED "You have been disconnected. Reason: %s" COLOR_RESET, recieveBuffer + 2);
 				disconnectSignal();
 				break;
 			case PACKET_LOG:
-				printf(COLOR_CLEARLINE);
-
-				printf(COLOR_ITALIC COLOR_GREY "<Log> %s" COLOR_RESET, recieveBuffer + 2);
+				printf(TERM_CLEARLINE COLOR_ITALIC COLOR_GREY "<Log> %s" COLOR_RESET, recieveBuffer + 2);
 
 				printInputBuffer();
 				break;
 			case PACKET_MESSAGE:;
 				char* str = strtok(recieveBuffer + 2, "~");
 
-				//Erase current line to overwrite user input
-				printf(COLOR_CLEARLINE);
-
 				//Print the message
-				printf(COLOR_GREEN "<Message> %s", str);
+				printf(TERM_CLEARLINE COLOR_GREEN "<Message> %s", str);
 
 				//The author
 				str = strtok(NULL, SEPARATOR);
@@ -130,15 +125,16 @@ void* recieveThread(void* ptr) {
 				printInputBuffer();
 				break;
 			case '\0':
-				puts(PREFIX COLOR_RED "Connection lost" COLOR_RESET);
+				puts(TERM_CLEARLINE PREFIX COLOR_RED "Connection lost" COLOR_RESET);
 				resetTerminal();
 				exit(0);
 				break;
 			case PACKET_NAME:
 				break;
 			default:
-				printf(
-					COLOR_DARK_GREY "<Unknown packet> ID: %i | Data: %s" COLOR_RESET "\n", recieveBuffer[0] - '0', recieveBuffer);
+				printf(TERM_CLEARLINE COLOR_DARK_GREY "<Unknown packet> ID: %i | Data: %s" COLOR_RESET "\n",
+							 recieveBuffer[0] - '0',
+							 recieveBuffer);
 				break;
 		}
 	}
@@ -247,8 +243,7 @@ int main(int argc, char** argv) {
 		//Send it off
 		sendMessage(inputBuffer, PACKET_MESSAGE);
 
-		//Move the terminal caret back a line
-		printf("\r\e[K");
+		printf(TERM_CLEARLINE);
 	}
 
 	disconnectSignal();
