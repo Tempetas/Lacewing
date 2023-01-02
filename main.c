@@ -9,7 +9,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#define PACKET_UNKNOWN '0'
+//Imported from Spark
 #define PACKET_CONNECT '1'
 #define PACKET_DISCONNECT '2'
 #define PACKET_LOG '3'
@@ -42,10 +42,8 @@ void sendMessage(char* msg, int type) {
 	char sendBuffer[MAX_MESSAGE_LENGTH] = { '\0' };
 
 	//Prefix the data with the packet id
-	if (type != PACKET_UNKNOWN) {
-		sendBuffer[0] = type;
-		strcat(sendBuffer, SEPARATOR);
-	}
+	sendBuffer[0] = type;
+	strcat(sendBuffer, SEPARATOR);
 
 	strcat(sendBuffer, msg);
 	strcat(sendBuffer, "\n");
