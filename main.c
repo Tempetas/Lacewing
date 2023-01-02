@@ -118,10 +118,9 @@ void* recieveThread(void* ptr) {
 				//And the timestamp
 				str = strtok(NULL, SEPARATOR);
 
-				//Workaround for the weird way timestamps are formatted by the server
-				str[strlen(str) - 5] = '\0';
-
+				//Timestamps are sent in the millisecond format
 				time_t time = atol(str);
+				time /= 1000;
 
 				//Convert to local time
 				struct tm localTime;
