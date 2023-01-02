@@ -104,7 +104,7 @@ void* recieveThread(void* ptr) {
 				str = strtok(NULL, SEPARATOR);
 
 				//Workaround for the weird way timestamps are formatted by the server
-				str[strlen(str) - 4] = '\0';
+				str[strlen(str) - 5] = '\0';
 
 				time_t time = atol(str);
 
