@@ -36,11 +36,6 @@ struct termios originalTermAttributes;
 //Global for it to be able to be drawn in the recieve thread
 char inputBuffer[MAX_MESSAGE_LENGTH] = { '\0' };
 
-//Restore original terminal attributes
-void resetTerminal() {
-	tcsetattr(fileno(stdin), TCSANOW, &originalTermAttributes);
-}
-
 //Send packets
 void sendMessage(char* msg, int type) {
 	char sendBuffer[MAX_MESSAGE_LENGTH] = { '\0' };
@@ -59,7 +54,8 @@ void sendMessage(char* msg, int type) {
 
 //Ctrl+C handler
 void disconnectSignal() {
-	resetTerminal();
+	//Restore original terminal attributes
+	tcsetattr(fileno(stdin), TCSANOW, &originalTermAttributes);
 
 	puts(TERM_CLEARLINE PREFIX "~<Quitting>~" COLOR_RESET);
 
@@ -126,8 +122,7 @@ void* recieveThread(void* ptr) {
 				break;
 			case '\0':
 				puts(TERM_CLEARLINE PREFIX COLOR_RED "Connection lost" COLOR_RESET);
-				resetTerminal();
-				exit(0);
+				disconnectSignal();
 				break;
 			case PACKET_NAME:
 				break;
@@ -187,10 +182,8 @@ int main(int argc, char** argv) {
 		tcgetattr(fileno(stdin), &originalTermAttributes);
 
 		//Prepare raw mode attributes
-		memcpy(&rawModeAttributes, &originalTermAttributes, sizeof(struct termios));
+		memcpy(&rawModeAttributes, &originalTermAttributes, sizeof(rawModeAttributes));
 		rawModeAttributes.c_lflag &= ~(ECHO | ICANON);
-		rawModeAttributes.c_cc[VTIME] = 0;
-		rawModeAttributes.c_cc[VMIN] = 1;
 
 		//Set the terminal to raw mode
 		tcsetattr(fileno(stdin), TCSANOW, &rawModeAttributes);
