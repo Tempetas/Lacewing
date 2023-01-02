@@ -1,4 +1,5 @@
 #include <arpa/inet.h>
+#include <openssl/evp.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdio.h>
@@ -64,6 +65,20 @@ void disconnectSignal() {
 	close(socketHandle);
 
 	exit(0);
+}
+
+void hashMD5(char* src, char* dest) {
+	unsigned int destSize = EVP_MD_size(EVP_md5());
+
+	EVP_MD_CTX* context = EVP_MD_CTX_new();
+
+	EVP_DigestInit_ex(context, EVP_md5(), NULL);
+
+	EVP_DigestUpdate(context, src, strlen(src));
+
+	EVP_DigestFinal_ex(context, dest, &destSize);
+
+	EVP_MD_CTX_free(context);
 }
 
 void printInputBuffer() {
@@ -138,8 +153,8 @@ void* recieveThread(void* ptr) {
 }
 
 int main(int argc, char** argv) {
-	if (argc < 4 || argc > 5) {
-		puts(PREFIX COLOR_RED "Command usage: ./lacewing <ip> <port> <username> <security code (default: 0)>" COLOR_RESET);
+	if (argc != 5) {
+		puts(PREFIX COLOR_RED "Command usage: ./lacewing <ip> <port> <username> <password>" COLOR_RESET);
 		return 0;
 	}
 
@@ -194,12 +209,33 @@ int main(int argc, char** argv) {
 	pthread_detach(recThread);
 
 	//Craft the login packet
+
+	//Username
 	strcat(inputBuffer, argv[3]);
 	strcat(inputBuffer, SEPARATOR);
-	strcat(inputBuffer, ((argc == 4) ? "0" : argv[4]));
 
-	//Workaround for the server's current socket implementation
-	strcat(inputBuffer, "\n");
+	{
+		//Password
+		const int md5Size = EVP_MD_size(EVP_md5());
+
+		//Store the raw representation
+		unsigned char* temp = malloc(md5Size);
+		hashMD5(argv[4], temp);
+
+		//Allocate enough space for a hex md5 string + null terminator
+		unsigned char* hashedPass = malloc(md5Size * 2 + 1);
+
+		for (int i = 0; i < md5Size; i++) {
+			sprintf(&hashedPass[i * 2], "%02x", (unsigned int)temp[i]);
+		}
+
+		free(temp);
+
+		//And finally store the password in the packet
+		strcat(inputBuffer, hashedPass);
+
+		free(hashedPass);
+	}
 
 	sendMessage(inputBuffer, PACKET_CONNECT);
 
