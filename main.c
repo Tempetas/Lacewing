@@ -101,6 +101,15 @@ void* recieveThread(void* ptr) {
 				disconnectSignal();
 				break;
 			case PACKET_LOG:
+				//The server sends separators instead of newlines in log packets
+				int len = strlen(recieveBuffer);
+
+				for (int i = 2; i < len; i++) {
+					if (recieveBuffer[i] == SEPARATOR[0]) {
+						recieveBuffer[i] = '\n';
+					}
+				}
+
 				printf(TERM_CLEARLINE COLOR_ITALIC COLOR_GREY "<Log> %s" COLOR_RESET, recieveBuffer + 2);
 
 				printInputBuffer();
