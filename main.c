@@ -123,31 +123,44 @@ void* recieveThread(void* ptr) {
 				printInputBuffer();
 				break;
 			case PACKET_MESSAGE:;
-				char* str = strtok(recieveBuffer + 2, "~");
+				printf("%s", TERM_CLEARLINE);
 
-				//Print the message
-				printf(TERM_CLEARLINE COLOR_GREEN "<Message> %s", str);
+				char *msgPtr, *msgPartPtr;
 
-				//The author
-				str = strtok(NULL, SEPARATOR);
-				printf(" - %s", str);
+				//Because Spark loves to concatenate message packets
 
-				//And the timestamp
-				str = strtok(NULL, SEPARATOR);
+				/* The msg[0] check is a hack for the server sometimes sending a random
+					name packet after the login messages */
+				for (char* msg = strtok_r(recieveBuffer, "\n", &msgPtr); msg != NULL && msg[0] == PACKET_MESSAGE;
+						 msg = strtok_r(NULL, "\n", &msgPtr)) {
 
-				//Timestamps are sent in the millisecond format
-				time_t time = atol(str);
-				time /= 1000;
+					char* str = strtok_r(msg + 2, SEPARATOR, &msgPartPtr);
 
-				//Convert to local time
-				struct tm localTime;
-				localtime_r(&time, &localTime);
+					//Print the message
+					printf(COLOR_GREEN "<Message> %s", str);
 
-				//Format
-				char formattedTime[64];
-				strftime(formattedTime, sizeof(formattedTime), "%H:%M %d/%m/%y", &localTime);
+					//The author
+					str = strtok_r(NULL, SEPARATOR, &msgPartPtr);
 
-				printf(" (%s)" COLOR_RESET "\n", formattedTime);
+					printf(" - %s", str);
+
+					//And the timestamp
+					str = strtok_r(NULL, SEPARATOR, &msgPartPtr);
+
+					//Timestamps are sent in the millisecond format
+					time_t time = atol(str);
+					time /= 1000;
+
+					//Convert to local time
+					struct tm localTime;
+					localtime_r(&time, &localTime);
+
+					//Format
+					char formattedTime[64];
+					strftime(formattedTime, sizeof(formattedTime), "%H:%M %d/%m/%y", &localTime);
+
+					printf(" (%s)" COLOR_RESET "\n", formattedTime);
+				}
 
 				printInputBuffer();
 				break;
