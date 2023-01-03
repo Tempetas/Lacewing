@@ -32,6 +32,9 @@
 int socketHandle;
 pthread_t recThread;
 
+//Whether the client is actively listening or already shutting down
+int isActive = 1;
+
 struct termios originalTermAttributes;
 
 //Global for it to be able to be drawn in the recieve thread
@@ -53,6 +56,9 @@ void sendMessage(char* msg, int type) {
 
 //Ctrl+C handler
 void disconnectSignal() {
+	//Start shutting down
+	isActive = 0;
+
 	//Restore original terminal attributes
 	tcsetattr(fileno(stdin), TCSANOW, &originalTermAttributes);
 
@@ -92,6 +98,10 @@ void* recieveThread(void* ptr) {
 		memset(recieveBuffer, '\0', sizeof(recieveBuffer));
 
 		read(socketHandle, recieveBuffer, sizeof(recieveBuffer));
+
+		if (!isActive) {
+			return 0;
+		}
 
 		switch (recieveBuffer[0]) {
 			case PACKET_DISCONNECT:
