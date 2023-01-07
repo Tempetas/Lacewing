@@ -1,4 +1,5 @@
 #include <arpa/inet.h>
+#include <netdb.h>
 #include <openssl/evp.h>
 #include <pthread.h>
 #include <signal.h>
@@ -197,10 +198,25 @@ int main(int argc, char** argv) {
 
 	//Server parameters
 	struct sockaddr_in server;
-
 	server.sin_family = AF_INET;
-	server.sin_addr.s_addr = inet_addr(argv[1]);
-	server.sin_port = htons(atoi(argv[2]));
+
+	{
+		struct addrinfo* info;
+		char resolvedIP[INET_ADDRSTRLEN];
+
+		//Resolve the hostname
+		if (getaddrinfo(argv[1], NULL, NULL, &info) != 0) {
+			puts(PREFIX COLOR_RED "Invalid host" COLOR_RESET);
+			return 0;
+		}
+
+		//Convert to string
+		inet_ntop(AF_INET, &(((struct sockaddr_in*)info->ai_addr)->sin_addr), resolvedIP, sizeof(resolvedIP));
+
+		//Set the ip and port
+		server.sin_addr.s_addr = inet_addr(resolvedIP);
+		server.sin_port = htons(atoi(argv[2]));
+	}
 
 	//Set terminal title
 	printf("\033]0;Lacewing\007");
