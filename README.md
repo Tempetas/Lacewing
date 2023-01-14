@@ -5,3 +5,5 @@ chatting application.
 
 ## Usage
     /lacewing <ip> <port> <username> <password>
+
+![Screenshot](https://github.com/Tempetas/Lacewing/blob/main/screenshot.png?raw=true)
