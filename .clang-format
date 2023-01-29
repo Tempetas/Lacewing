@@ -2,6 +2,8 @@
 BasedOnStyle: Mozilla
 AlwaysBreakAfterDefinitionReturnType: None
 AlwaysBreakAfterReturnType: None
+AllowShortBlocksOnASingleLine: true
+AllowShortLoopsOnASingleLine: true
 BraceWrapping:
   AfterEnum: true
   AfterFunction: true

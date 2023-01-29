@@ -29,6 +29,7 @@
 #define MAX_MESSAGE_LENGTH 4096
 #define PREFIX COLOR_CYAN "[Lacewing] "
 #define SEPARATOR "~"
+#define NEWLINE "\n"
 
 int socketHandle;
 pthread_t recThread;
@@ -50,7 +51,7 @@ void sendMessage(char* msg, int type) {
 	strcat(sendBuffer, SEPARATOR);
 
 	strcat(sendBuffer, msg);
-	strcat(sendBuffer, "\n");
+	strcat(sendBuffer, NEWLINE);
 
 	write(socketHandle, sendBuffer, strlen(sendBuffer));
 }
@@ -72,7 +73,7 @@ void disconnectSignal() {
 	exit(0);
 }
 
-void hashMD5(char* src, char* dest) {
+void hashMD5(char* src, unsigned char* dest) {
 	unsigned int destSize = EVP_MD_size(EVP_md5());
 
 	EVP_MD_CTX* context = EVP_MD_CTX_new();
@@ -104,49 +105,41 @@ void* recieveThread(void* ptr) {
 			return 0;
 		}
 
-		switch (recieveBuffer[0]) {
-			case PACKET_DISCONNECT:
-				printf(TERM_CLEARLINE PREFIX COLOR_RED "You have been disconnected. Reason: %s" COLOR_RESET, recieveBuffer + 2);
-				disconnectSignal();
-				break;
-			case PACKET_LOG:
-				//The server sends separators instead of newlines in log packets
-				int len = strlen(recieveBuffer);
-
-				for (int i = 2; i < len; i++) {
-					if (recieveBuffer[i] == SEPARATOR[0]) {
-						recieveBuffer[i] = '\n';
+		//The packets could have been concatenated
+		for (char *packetPtr, *packet = strtok_r(recieveBuffer, NEWLINE, &packetPtr); packet != NULL;
+				 packet = strtok_r(NULL, NEWLINE, &packetPtr)) {
+			switch (packet[0]) {
+				case PACKET_DISCONNECT:
+					printf(TERM_CLEARLINE PREFIX COLOR_RED "You have been disconnected. Reason: %s" COLOR_RESET, packet + 2);
+					disconnectSignal();
+					break;
+				case PACKET_LOG:
+					//The server sends separators instead of newlines in log packets
+					for (int i = 2, len = strlen(packet); i < len; i++) {
+						if (packet[i] == SEPARATOR[0]) {
+							packet[i] = '\n';
+						}
 					}
-				}
 
-				printf(TERM_CLEARLINE COLOR_ITALIC COLOR_GREY "<Log> %s" COLOR_RESET, recieveBuffer + 2);
+					printf(TERM_CLEARLINE COLOR_ITALIC COLOR_GREY "<Log> %s" COLOR_RESET NEWLINE, packet + 2);
 
-				printInputBuffer();
-				break;
-			case PACKET_MESSAGE:;
-				printf("%s", TERM_CLEARLINE);
+					printInputBuffer();
+					break;
+				case PACKET_MESSAGE:;
+					printf(TERM_CLEARLINE);
 
-				char *msgPtr, *msgPartPtr;
-
-				//Because Spark loves to concatenate message packets
-
-				/* The msg[0] check is a hack for the server sometimes sending a random
-					name packet after the login messages */
-				for (char* msg = strtok_r(recieveBuffer, "\n", &msgPtr); msg != NULL && msg[0] == PACKET_MESSAGE;
-						 msg = strtok_r(NULL, "\n", &msgPtr)) {
-
-					char* str = strtok_r(msg + 2, SEPARATOR, &msgPartPtr);
+					char *msgPart, *str = strtok_r(packet + 2, SEPARATOR, &msgPart);
 
 					//Print the message
 					printf(COLOR_GREEN "<Message> %s", str);
 
 					//The author
-					str = strtok_r(NULL, SEPARATOR, &msgPartPtr);
+					str = strtok_r(NULL, SEPARATOR, &msgPart);
 
 					printf(" - %s", str);
 
 					//And the timestamp
-					str = strtok_r(NULL, SEPARATOR, &msgPartPtr);
+					str = strtok_r(NULL, SEPARATOR, &msgPart);
 
 					//Timestamps are sent in the millisecond format
 					time_t time = atol(str);
@@ -160,22 +153,23 @@ void* recieveThread(void* ptr) {
 					char formattedTime[64];
 					strftime(formattedTime, sizeof(formattedTime), "%H:%M %d/%m/%y", &localTime);
 
-					printf(" (%s)" COLOR_RESET "\n", formattedTime);
-				}
+					printf(" (%s)" COLOR_RESET NEWLINE, formattedTime);
 
-				printInputBuffer();
-				break;
-			case '\0':
-				puts(TERM_CLEARLINE PREFIX COLOR_RED "Connection lost" COLOR_RESET);
-				disconnectSignal();
-				break;
-			case PACKET_NAME:
-				break;
-			default:
-				printf(TERM_CLEARLINE COLOR_DARK_GREY "<Unknown packet> ID: %i | Data: %s" COLOR_RESET "\n",
-							 recieveBuffer[0] - '0',
-							 recieveBuffer);
-				break;
+					printInputBuffer();
+					break;
+				case '\0':
+					puts(TERM_CLEARLINE PREFIX COLOR_RED "Connection lost" COLOR_RESET);
+					disconnectSignal();
+					break;
+				case PACKET_NAME:
+					//Noop
+					break;
+				default:
+					printf(TERM_CLEARLINE COLOR_DARK_GREY "<Unknown packet> ID: %i | Data: %s" COLOR_RESET NEWLINE,
+								 packet[0] - '0',
+								 packet);
+					break;
+			}
 		}
 	}
 
@@ -188,7 +182,7 @@ int main(int argc, char** argv) {
 		return 0;
 	}
 
-	//Creating a socket
+	//Create a socket
 	socketHandle = socket(AF_INET, SOCK_STREAM, 0);
 
 	if (socketHandle == -1) {
@@ -197,8 +191,7 @@ int main(int argc, char** argv) {
 	}
 
 	//Server parameters
-	struct sockaddr_in server;
-	server.sin_family = AF_INET;
+	struct sockaddr_in server = { .sin_family = AF_INET };
 
 	{
 		struct addrinfo* info;
@@ -218,7 +211,7 @@ int main(int argc, char** argv) {
 		server.sin_port = htons(atoi(argv[2]));
 	}
 
-	//Set terminal title
+	//Set the terminal title
 	printf("\033]0;Lacewing\007");
 
 	puts(PREFIX "~<Connecting>~" COLOR_RESET);
@@ -268,11 +261,9 @@ int main(int argc, char** argv) {
 		hashMD5(argv[4], temp);
 
 		//Allocate enough space for a hex md5 string + null terminator
-		unsigned char* hashedPass = malloc(md5Size * 2 + 1);
+		char* hashedPass = malloc(md5Size * 2 + 1);
 
-		for (int i = 0; i < md5Size; i++) {
-			sprintf(&hashedPass[i * 2], "%02x", (unsigned int)temp[i]);
-		}
+		for (int i = 0; i < md5Size; i++) { sprintf(&hashedPass[i * 2], "%02x", (unsigned int)temp[i]); }
 
 		free(temp);
 
@@ -294,8 +285,8 @@ int main(int argc, char** argv) {
 
 		//Wait for the user to type the message
 		while (1) {
-			while ((character = fgetc(stdin)) == EOF)
-				;
+			while ((character = fgetc(stdin)) == EOF) {}
+
 			if (character == '\n') {
 				if (charactersInBuff > 0) {
 					break;
@@ -314,6 +305,9 @@ int main(int argc, char** argv) {
 				}
 			}
 		}
+
+		//The server currently only supports the "general" channel
+		strcat(inputBuffer, SEPARATOR "general");
 
 		//Send it off
 		sendMessage(inputBuffer, PACKET_MESSAGE);
